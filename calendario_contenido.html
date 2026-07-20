@@ -278,7 +278,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
-const APP_VERSION = 'v2.3';
+const APP_VERSION = 'v2.4';
 const APP_UPDATED = '20 jul 2026';
 
 const SUPABASE_URL = 'https://daxxfqquhzqmhpwiwsok.supabase.co';
@@ -417,6 +417,7 @@ function renderOptionsPanel(){
         fillStaticSelects(); fillFilterSelects(); renderOptionsPanel(); render();
         setSync('saving', 'Guardando…');
         const { error } = await sb.from('options').delete().eq('category', key).eq('value', v);
+        if(error) console.error('delete options error', error);
         setSync(error ? 'error' : 'ok', error ? 'Error al guardar' : 'Conectado a Supabase');
       });
     });
@@ -428,7 +429,8 @@ function renderOptionsPanel(){
       OPTIONS[key].push(v);
       fillStaticSelects(); fillFilterSelects(); renderOptionsPanel(); render();
       setSync('saving', 'Guardando…');
-      const { error } = await sb.from('options').insert({ category:key, value:v, sort_order: Date.now() });
+      const { error } = await sb.from('options').insert({ category:key, value:v, sort_order: OPTIONS[key].length });
+      if(error) console.error('insert options error', error);
       setSync(error ? 'error' : 'ok', error ? 'Error al guardar' : 'Conectado a Supabase');
     }
     addBtn.addEventListener('click', doAdd);
