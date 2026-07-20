@@ -88,7 +88,7 @@
   .filter-bar select, .filter-bar input[type=date]{width:auto;}
   .filter-bar input[type=text]{flex:1; min-width:200px;}
 
-  table.posts-table{width:100%; border-collapse:collapse; table-layout:fixed;}
+  table.posts-table{width:100%; min-width:760px; border-collapse:collapse; table-layout:fixed;}
   table.posts-table th{
     text-align:left; font-size:11px; color:var(--text-muted); text-transform:uppercase;
     letter-spacing:.02em; padding:8px 8px; border-bottom:1px solid var(--border-strong); font-weight:600;
@@ -126,6 +126,30 @@
   .brand-mark .serif{font-family:Georgia,"Times New Roman",serif; font-style:italic; font-weight:400; color:var(--text);}
   .brand-mark .sans{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; font-weight:700; color:var(--text);}
   .brand h1{font-size:14px; font-weight:400; color:var(--text-muted); margin:0;}
+
+  @media (max-width:640px){
+    .app{padding:14px 12px 40px;}
+    header{gap:10px;}
+    .brand-mark{font-size:20px;}
+    .brand h1{font-size:12px;}
+    .controls{width:100%;}
+    .controls span{min-width:auto; flex:1;}
+    #brandFilter{width:100%; order:1; margin-top:4px;}
+    .tabs{overflow-x:auto; -webkit-overflow-scrolling:touch; flex-wrap:nowrap;}
+    .tab-btn{margin-right:14px; font-size:13px; flex-shrink:0;}
+    .calendar-grid{gap:3px;}
+    .dow{font-size:9px; padding:2px 0;}
+    .day{min-height:56px; padding:3px; border-radius:6px;}
+    .day .num{font-size:10px; margin-bottom:1px;}
+    .chip{font-size:8px; padding:1px 3px;}
+    .more{font-size:8px;}
+    section.add-post, section.options, section.posts{padding:12px 14px;}
+    .form-grid, .desc-row{grid-template-columns:1fr; flex-direction:column;}
+    .desc-row input[type=text]{min-width:0;}
+    .filter-bar{flex-direction:column; align-items:stretch;}
+    .filter-bar select, .filter-bar input[type=date], .filter-bar input[type=text], .filter-bar button{width:100%;}
+    aside.tasks{position:static;}
+  }
 </style>
 </head>
 <body>
