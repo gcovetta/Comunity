@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendario de contenido</title>
+<style>
+  :root{
+    --bg:#f5f5f3; --card:#ffffff; --border:#e4e3df; --border-strong:#d3d2cc;
+    --text:#232320; --text-2:#6b6a64; --text-muted:#9a988f;
+    --accent:#5b4fd6; --accent-bg:#efedfc;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:14px; line-height:1.5;
+  }
+  .app{width:100%; margin:0; padding:24px 32px 60px;}
+  header{display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px;}
+  h1{font-size:20px; font-weight:600; margin:0;}
+  h2{font-size:15px; font-weight:600; margin:0 0 12px;}
+  .controls{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  .controls span{font-size:14px; font-weight:500; min-width:130px; text-align:center; text-transform:capitalize;}
+  button{
+    font-family:inherit; font-size:13px; cursor:pointer; border-radius:8px;
+    border:1px solid var(--border-strong); background:#fff; color:var(--text);
+    padding:7px 12px;
+  }
+  button:hover{background:#f0f0ee;}
+  button.primary{background:var(--accent); border-color:var(--accent); color:#fff;}
+  button.primary:hover{background:#4c40c4;}
+  button.icon{padding:5px 9px; font-size:14px; line-height:1;}
+  select, input[type=text], input[type=date], input[type=file]{
+    font-family:inherit; font-size:13px; padding:7px 9px; border-radius:8px;
+    border:1px solid var(--border-strong); background:#fff; color:var(--text);
+  }
+  .tabs{display:flex; gap:4px; margin-bottom:16px; border-bottom:1px solid var(--border);}
+  .tab-btn{
+    border:none; border-bottom:2px solid transparent; border-radius:0; background:none;
+    padding:9px 4px; margin-right:20px; font-size:14px; color:var(--text-muted);
+  }
+  .tab-btn:hover{background:none; color:var(--text-2);}
+  .tab-btn.active{color:var(--text); border-bottom-color:var(--accent); font-weight:500;}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+
+  .layout{display:grid; grid-template-columns:1fr 280px; gap:24px; align-items:start;}
+  @media (max-width:900px){ .layout{grid-template-columns:1fr;} }
+
+  .calendar-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-bottom:24px;}
+  .dow{font-size:11px; color:var(--text-muted); text-align:center; padding:4px 0; font-weight:600;}
+  .day{
+    min-height:88px; border:1px solid var(--border); border-radius:8px; background:var(--card);
+    padding:6px; text-align:left; display:flex; flex-direction:column; gap:3px;
+  }
+  .day.empty{background:transparent; border:none;}
+  .day.selected{border:2px solid var(--accent); padding:5px;}
+  .day .num{font-size:12px; color:var(--text-2); margin-bottom:2px;}
+  .chip{font-size:10px; padding:2px 5px; border-radius:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .more{font-size:10px; color:var(--text-muted);}
+
+  section.add-post, section.options, section.posts{
+    background:var(--card); border:1px solid var(--border); border-radius:12px;
+    padding:16px 18px; margin-bottom:20px;
+  }
+  .form-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; margin-bottom:8px;}
+  .form-grid input, .form-grid select{width:100%;}
+  .desc-row{display:flex; gap:8px; flex-wrap:wrap;}
+  .desc-row input[type=text]{flex:1; min-width:180px;}
+
+  .options-toggle{background:none; border:none; padding:0; color:var(--accent); font-size:13px; cursor:pointer;}
+  .options-body{display:none; margin-top:14px;}
+  .options-body.open{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px;}
+  .opt-group h3{font-size:12px; color:var(--text-2); margin:0 0 8px; font-weight:600;}
+  .opt-chips{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;}
+  .opt-chip{display:flex; align-items:center; gap:5px; font-size:12px; padding:3px 4px 3px 9px; border-radius:14px; background:var(--bg); border:1px solid var(--border-strong);}
+  .opt-chip button{padding:0 5px; border:none; background:none; font-size:13px; border-radius:50%; line-height:1.4;}
+  .opt-add{display:flex; gap:6px;}
+  .opt-add input{flex:1; font-size:12px; padding:5px 7px;}
+  .opt-add button{padding:5px 9px; font-size:12px;}
+
+  .posts-header{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:10px;}
+  .posts-header span{font-size:12px; color:var(--text-muted);}
+
+  .filter-bar{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:14px;}
+  .filter-bar select, .filter-bar input[type=date]{width:auto;}
+  .filter-bar input[type=text]{flex:1; min-width:200px;}
+
+  table.posts-table{width:100%; border-collapse:collapse; table-layout:fixed;}
+  table.posts-table th{
+    text-align:left; font-size:11px; color:var(--text-muted); text-transform:uppercase;
+    letter-spacing:.02em; padding:8px 8px; border-bottom:1px solid var(--border-strong); font-weight:600;
+  }
+  table.posts-table th.sortable{cursor:pointer; user-select:none;}
+  table.posts-table th.sortable:hover{color:var(--text);}
+  .sort-arrow{margin-left:3px; font-size:9px;}
+  table.posts-table td{padding:8px 8px; border-bottom:1px solid var(--border); vertical-align:middle;}
+  table.posts-table select, table.posts-table input[type=text], table.posts-table input[type=date]{
+    width:100%; font-size:12px; padding:5px 6px;
+  }
+  th.col-date, td.col-date{width:118px;}
+  th.col-thumb, td.col-thumb{width:52px;}
+  th.col-actions, td.col-actions{width:70px; text-align:right;}
+  .thumb{width:40px; height:40px; border-radius:6px; background:var(--bg); overflow:hidden; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:9px;}
+  .thumb img{width:100%; height:100%; object-fit:cover;}
+  .badge{display:inline-block; font-size:11px; padding:2px 8px; border-radius:6px; border:1px solid transparent; font-weight:500;}
+  .empty-msg{font-size:13px; color:var(--text-muted); padding:8px 0;}
+
+  aside.tasks{
+    background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px 18px;
+    position:sticky; top:24px;
+  }
+  .task-add{display:flex; gap:6px; margin-bottom:10px;}
+  .task-add input{flex:1;}
+  ul#taskList{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px;}
+  ul#taskList li{display:flex; align-items:center; gap:8px; padding:6px 8px; border:1px solid var(--border); border-radius:8px; font-size:13px;}
+  ul#taskList li input[type=checkbox]{flex-shrink:0;}
+  ul#taskList li span{flex:1; word-break:break-word;}
+  ul#taskList li.done span{text-decoration:line-through; color:var(--text-muted);}
+  ul#taskList li button{padding:3px 7px; font-size:12px;}
+
+  .brand{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;}
+  .brand-mark{font-size:26px; line-height:1; white-space:nowrap;}
+  .brand-mark .serif{font-family:Georgia,"Times New Roman",serif; font-style:italic; font-weight:400; color:var(--text);}
+  .brand-mark .sans{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; font-weight:700; color:var(--text);}
+  .brand h1{font-size:14px; font-weight:400; color:var(--text-muted); margin:0;}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <span class="brand-mark"><span class="serif">new</span><span class="sans">pov.</span></span>
+      <h1>Calendario de contenido</h1>
+    </div>
+    <div class="controls">
+      <button id="prevMonth">&lsaquo;</button>
+      <span id="monthLabel"></span>
+      <button id="nextMonth">&rsaquo;</button>
+      <select id="brandFilter"></select>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="calendar">Calendario</button>
+    <button class="tab-btn" data-tab="config">Cargar y configurar</button>
+  </div>
+
+  <div class="layout">
+    <main>
+      <div id="tab-calendar" class="tab-panel active">
+      <div class="calendar-grid" id="calendarGrid"></div>
+
+      <section class="posts">
+        <div class="posts-header">
+          <h2>Publicaciones</h2>
+          <span id="dayFilterLabel"></span>
+        </div>
+        <div class="filter-bar">
+          <select id="filterType"></select>
+          <select id="filterObjetivo"></select>
+          <select id="filterState"></select>
+          <input type="date" id="filterFrom" title="Desde">
+          <input type="date" id="filterTo" title="Hasta">
+          <input type="text" id="filterSearch" placeholder="Buscar en descripción, comentarios o responsable">
+          <button id="filterClear">Limpiar filtros</button>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="posts-table">
+            <thead>
+              <tr>
+                <th class="col-thumb">Foto</th>
+                <th class="col-date sortable" data-field="date">Fecha<span class="sort-arrow"></span></th>
+                <th class="sortable" data-field="brand">Marca<span class="sort-arrow"></span></th>
+                <th class="sortable" data-field="type">Tipo<span class="sort-arrow"></span></th>
+                <th class="sortable" data-field="objetivo">Objetivo<span class="sort-arrow"></span></th>
+                <th class="sortable" data-field="state">Estado<span class="sort-arrow"></span></th>
+                <th class="sortable" data-field="desc">Descripción<span class="sort-arrow"></span></th>
+                <th class="sortable" data-field="comments">Comentarios<span class="sort-arrow"></span></th>
+                <th class="sortable" data-field="resp">Responsable<span class="sort-arrow"></span></th>
+                <th class="col-actions"></th>
+              </tr>
+            </thead>
+            <tbody id="postsBody"></tbody>
+          </table>
+        </div>
+        <div id="emptyPosts"></div>
+      </section>
+      </div>
+
+      <div id="tab-config" class="tab-panel">
+      <section class="add-post">
+        <h2>Nueva publicación</h2>
+        <div class="form-grid">
+          <input type="date" id="nDate" value="2026-07-20">
+          <select id="nBrand"></select>
+          <select id="nType"></select>
+          <select id="nObjetivo"></select>
+          <select id="nState"></select>
+        </div>
+        <div class="desc-row">
+          <input type="file" id="nImg" accept="image/*">
+          <input type="text" id="nDesc" placeholder="Descripción">
+          <input type="text" id="nResp" placeholder="Responsable">
+          <input type="text" id="nComments" placeholder="Comentarios">
+          <button class="primary" id="addPost">Agregar</button>
+        </div>
+      </section>
+
+      <section class="options">
+        <button class="options-toggle" id="optionsToggle">Configurar opciones de los combos ▾</button>
+        <div class="options-body" id="optionsBody"></div>
+      </section>
+      </div>
+    </main>
+
+    <aside class="tasks">
+      <h2>Tareas</h2>
+      <div class="task-add">
+        <input type="text" id="taskInput" placeholder="Nueva tarea">
+        <button class="primary" id="taskAdd">+</button>
+      </div>
+      <ul id="taskList"></ul>
+    </aside>
+  </div>
+</div>
+
+<script>
+const LS_POSTS='cal_posts_v2', LS_TASKS='cal_tasks_v1', LS_OPTIONS='cal_options_v2';
+
+const DEFAULT_OPTIONS = {
+  marca: ['Eli Moisó','Il Vero Divino'],
+  tipo: ['Publicación','Historia','Reel'],
+  objetivo: ['Awareness / alcance','Engagement','Tráfico al sitio','Ventas / conversión','Fidelización'],
+  estado: ['Publicado','Programado','En curso','Idea']
+};
+let OPTIONS = JSON.parse(localStorage.getItem(LS_OPTIONS) || 'null') || JSON.parse(JSON.stringify(DEFAULT_OPTIONS));
+
+let posts = JSON.parse(localStorage.getItem(LS_POSTS) || 'null') || [
+  { id:1, date:'2026-07-21', brand:'Eli Moisó', type:'Publicación', objetivo:'Engagement', desc:'Archivo de estilo: un toque de amarillo', state:'Publicado', resp:'Flor', comments:'', img:null },
+  { id:2, date:'2026-07-21', brand:'Il Vero Divino', type:'Historia', objetivo:'Ventas / conversión', desc:'Rebajas de primavera 20%', state:'Publicado', resp:'Flor', comments:'', img:null },
+  { id:3, date:'2026-07-24', brand:'Eli Moisó', type:'Reel', objetivo:'Awareness / alcance', desc:'Detrás de escena sesión de fotos', state:'En curso', resp:'Flor', comments:'Falta editar audio', img:null },
+  { id:4, date:'2026-07-27', brand:'Il Vero Divino', type:'Publicación', objetivo:'Fidelización', desc:'Anuncio nuevo varietal', state:'Idea', resp:'', comments:'', img:null }
+];
+let tasks = JSON.parse(localStorage.getItem(LS_TASKS) || 'null') || [
+  { id:1, text:'Confirmar fotógrafo para sesión de julio', done:false },
+  { id:2, text:'Escribir copy rebajas Il Vero Divino', done:true }
+];
+let nextPostId = Math.max(0, ...posts.map(p=>p.id)) + 1;
+let nextTaskId = Math.max(0, ...tasks.map(t=>t.id)) + 1;
+let cur = new Date(2026, 6, 1);
+let selectedDay = null;
+let filters = { tipo:'all', objetivo:'all', estado:'all', from:'', to:'', search:'' };
+let sortState = { field:'date', dir:1 };
+
+const PALETTE = [
+  {bg:'#e1f5f2', fg:'#0f766e'}, {bg:'#fdece1', fg:'#c2510c'}, {bg:'#fbe6f0', fg:'#a6296b'},
+  {bg:'#e5f4e9', fg:'#2f8a4e'}, {bg:'#fbf1d9', fg:'#b5820f'}, {bg:'#e6f0fb', fg:'#1d5fa0'},
+  {bg:'#f1eef8', fg:'#6b4fbf'}, {bg:'#eeede8', fg:'#6b6a64'}
+];
+const ESTADO_KNOWN = {Publicado:PALETTE[3], Programado:PALETTE[4], 'En curso':PALETTE[5], Idea:PALETTE[7]};
+const TIPO_KNOWN = {'Publicación':PALETTE[0], 'Historia':PALETTE[1], 'Reel':PALETTE[2]};
+
+function colorFor(known, list, value){
+  if(known[value]) return known[value];
+  let idx = list.indexOf(value);
+  if(idx===-1) idx = 0;
+  return PALETTE[idx % PALETTE.length];
+}
+function estadoColor(v){ return colorFor(ESTADO_KNOWN, OPTIONS.estado, v); }
+function tipoColor(v){ return colorFor(TIPO_KNOWN, OPTIONS.tipo, v); }
+function marcaColor(v){ return colorFor({}, OPTIONS.marca, v); }
+
+function savePosts(){ localStorage.setItem(LS_POSTS, JSON.stringify(posts)); }
+function saveTasks(){ localStorage.setItem(LS_TASKS, JSON.stringify(tasks)); }
+function saveOptions(){ localStorage.setItem(LS_OPTIONS, JSON.stringify(OPTIONS)); }
+function pad(n){ return String(n).padStart(2,'0'); }
+function keyOf(y,m,d){ return `${y}-${pad(m+1)}-${pad(d)}`; }
+function esc(s){ return (s||'').replace(/"/g,'&quot;'); }
+
+function optionsHtml(list, current, extraStyle){
+  const all = list.includes(current) || !current ? list : [current, ...list];
+  return all.map(o => `<option ${o===current?'selected':''}>${o}</option>`).join('');
+}
+
+function fillStaticSelects(){
+  document.getElementById('brandFilter').innerHTML =
+    `<option value="all">Todas las marcas</option>` + OPTIONS.marca.map(m=>`<option>${m}</option>`).join('');
+  document.getElementById('nBrand').innerHTML = OPTIONS.marca.map(m=>`<option>${m}</option>`).join('');
+  document.getElementById('nType').innerHTML = OPTIONS.tipo.map(m=>`<option>${m}</option>`).join('');
+  document.getElementById('nObjetivo').innerHTML = OPTIONS.objetivo.map(m=>`<option>${m}</option>`).join('');
+  document.getElementById('nState').innerHTML = OPTIONS.estado.map(m=>`<option>${m}</option>`).join('');
+}
+
+function fillFilterSelects(){
+  const t = document.getElementById('filterType').value || 'all';
+  const o = document.getElementById('filterObjetivo').value || 'all';
+  const s = document.getElementById('filterState').value || 'all';
+  document.getElementById('filterType').innerHTML = '<option value="all">Todos los tipos</option>' + OPTIONS.tipo.map(m=>`<option>${m}</option>`).join('');
+  document.getElementById('filterObjetivo').innerHTML = '<option value="all">Todos los objetivos</option>' + OPTIONS.objetivo.map(m=>`<option>${m}</option>`).join('');
+  document.getElementById('filterState').innerHTML = '<option value="all">Todos los estados</option>' + OPTIONS.estado.map(m=>`<option>${m}</option>`).join('');
+  document.getElementById('filterType').value = t;
+  document.getElementById('filterObjetivo').value = o;
+  document.getElementById('filterState').value = s;
+}
+
+function syncFiltersFromUI(){
+  filters.tipo = document.getElementById('filterType').value;
+  filters.objetivo = document.getElementById('filterObjetivo').value;
+  filters.estado = document.getElementById('filterState').value;
+  filters.from = document.getElementById('filterFrom').value;
+  filters.to = document.getElementById('filterTo').value;
+  filters.search = document.getElementById('filterSearch').value.trim().toLowerCase();
+}
+
+function updateSortIndicators(){
+  document.querySelectorAll('th.sortable').forEach(th => {
+    const span = th.querySelector('.sort-arrow');
+    span.textContent = th.dataset.field===sortState.field ? (sortState.dir===1 ? '▲' : '▼') : '';
+  });
+}
+
+function renderOptionsPanel(){
+  const groups = [ ['marca','Marca'], ['tipo','Tipo de contenido'], ['objetivo','Objetivo'], ['estado','Estado'] ];
+  document.getElementById('optionsBody').innerHTML = groups.map(([key,label]) => `
+    <div class="opt-group" data-key="${key}">
+      <h3>${label}</h3>
+      <div class="opt-chips">
+        ${OPTIONS[key].map(v => `<span class="opt-chip">${v}<button data-remove="${esc(v)}">×</button></span>`).join('')}
+      </div>
+      <div class="opt-add">
+        <input type="text" placeholder="Agregar opción">
+        <button data-add>Agregar</button>
+      </div>
+    </div>
+  `).join('');
+
+  document.querySelectorAll('.opt-group').forEach(group => {
+    const key = group.dataset.key;
+    group.querySelectorAll('[data-remove]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        OPTIONS[key] = OPTIONS[key].filter(v => v !== btn.dataset.remove);
+        saveOptions(); fillStaticSelects(); fillFilterSelects(); renderOptionsPanel(); render();
+      });
+    });
+    const input = group.querySelector('input');
+    const addBtn = group.querySelector('[data-add]');
+    function doAdd(){
+      const v = input.value.trim();
+      if(!v || OPTIONS[key].includes(v)) return;
+      OPTIONS[key].push(v);
+      saveOptions(); fillStaticSelects(); fillFilterSelects(); renderOptionsPanel(); render();
+    }
+    addBtn.addEventListener('click', doAdd);
+    input.addEventListener('keydown', e => { if(e.key==='Enter') doAdd(); });
+  });
+}
+
+function renderCalendar(){
+  const y = cur.getFullYear(), m = cur.getMonth();
+  document.getElementById('monthLabel').textContent = cur.toLocaleDateString('es-AR', { month:'long', year:'numeric' });
+  const fb = document.getElementById('brandFilter').value || 'all';
+  const filtered = posts.filter(p => fb==='all' || p.brand===fb);
+  const byDate = {};
+  filtered.forEach(p => { (byDate[p.date] = byDate[p.date] || []).push(p); });
+
+  const firstDow = (new Date(y,m,1).getDay() + 6) % 7;
+  const daysInMonth = new Date(y, m+1, 0).getDate();
+  const grid = document.getElementById('calendarGrid');
+  let html = ['L','M','X','J','V','S','D'].map(d => `<div class="dow">${d}</div>`).join('');
+  for(let i=0;i<firstDow;i++) html += '<div class="day empty"></div>';
+  for(let d=1; d<=daysInMonth; d++){
+    const k = keyOf(y,m,d);
+    const entries = byDate[k] || [];
+    const chips = entries.slice(0,3).map(e => { const c = tipoColor(e.type); return `<div class="chip" style="background:${c.bg}; color:${c.fg};">${e.type}</div>`; }).join('');
+    const more = entries.length>3 ? `<div class="more">+${entries.length-3} más</div>` : '';
+    const sel = selectedDay===k ? ' selected' : '';
+    html += `<button class="day${sel}" data-day="${k}"><div class="num">${d}</div>${chips}${more}</button>`;
+  }
+  grid.innerHTML = html;
+  grid.querySelectorAll('.day[data-day]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const day = btn.dataset.day;
+      selectedDay = selectedDay===day ? null : day;
+      render();
+    });
+  });
+}
+
+function renderPosts(){
+  const fb = document.getElementById('brandFilter').value || 'all';
+  let filtered = posts.filter(p => fb==='all' || p.brand===fb);
+  if(selectedDay) filtered = filtered.filter(p => p.date===selectedDay);
+  if(filters.tipo!=='all') filtered = filtered.filter(p => p.type===filters.tipo);
+  if(filters.objetivo!=='all') filtered = filtered.filter(p => p.objetivo===filters.objetivo);
+  if(filters.estado!=='all') filtered = filtered.filter(p => p.state===filters.estado);
+  if(filters.from) filtered = filtered.filter(p => p.date >= filters.from);
+  if(filters.to) filtered = filtered.filter(p => p.date <= filters.to);
+  if(filters.search) filtered = filtered.filter(p => `${p.desc} ${p.comments} ${p.resp}`.toLowerCase().includes(filters.search));
+
+  filtered.sort((a,b)=>{
+    const av = String(a[sortState.field] ?? '');
+    const bv = String(b[sortState.field] ?? '');
+    return av.localeCompare(bv, 'es', {sensitivity:'base'}) * sortState.dir;
+  });
+  updateSortIndicators();
+
+  document.getElementById('dayFilterLabel').textContent = selectedDay
+    ? `${new Date(selectedDay+'T00:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'long'})} · tocá el día otra vez para ver todo el mes`
+    : 'todo el mes';
+
+  const body = document.getElementById('postsBody');
+  const emptyEl = document.getElementById('emptyPosts');
+  if(filtered.length===0){
+    body.innerHTML = '';
+    emptyEl.innerHTML = '<p class="empty-msg">No hay publicaciones cargadas.</p>';
+    return;
+  }
+  emptyEl.innerHTML = '';
+
+  body.innerHTML = filtered.map(p => {
+    const sc = estadoColor(p.state);
+    return `
+    <tr data-id="${p.id}">
+      <td class="col-thumb"><div class="thumb">${p.img ? `<img src="${p.img}">` : 'sin foto'}</div></td>
+      <td class="col-date"><input type="date" data-field="date" value="${p.date}"></td>
+      <td><select data-field="brand">${optionsHtml(OPTIONS.marca, p.brand)}</select></td>
+      <td><select data-field="type">${optionsHtml(OPTIONS.tipo, p.type)}</select></td>
+      <td><select data-field="objetivo">${optionsHtml(OPTIONS.objetivo, p.objetivo)}</select></td>
+      <td><select data-field="state" style="background:${sc.bg}; color:${sc.fg}; border-color:${sc.bg}; font-weight:500;">${optionsHtml(OPTIONS.estado, p.state)}</select></td>
+      <td><input type="text" data-field="desc" value="${esc(p.desc)}"></td>
+      <td><input type="text" data-field="comments" value="${esc(p.comments)}"></td>
+      <td><input type="text" data-field="resp" value="${esc(p.resp)}"></td>
+      <td class="col-actions"><button class="icon" data-act="del">Eliminar</button></td>
+    </tr>`;
+  }).join('');
+
+  body.querySelectorAll('tr').forEach(row => {
+    const id = Number(row.dataset.id);
+    row.querySelectorAll('[data-field]').forEach(el => {
+      const evt = el.tagName==='SELECT' ? 'change' : 'input';
+      el.addEventListener(evt, () => {
+        const post = posts.find(p=>p.id===id);
+        if(!post) return;
+        post[el.dataset.field] = el.value;
+        savePosts();
+        if(el.dataset.field==='state'){ const c = estadoColor(el.value); el.style.background=c.bg; el.style.color=c.fg; el.style.borderColor=c.bg; }
+        if(el.dataset.field==='date' || el.dataset.field==='brand'){ renderCalendar(); }
+      });
+    });
+    row.querySelector('[data-act="del"]').addEventListener('click', () => {
+      posts = posts.filter(p=>p.id!==id);
+      savePosts();
+      render();
+    });
+  });
+}
+
+function renderTasks(){
+  const ul = document.getElementById('taskList');
+  if(tasks.length===0){ ul.innerHTML = '<p class="empty-msg">Sin tareas.</p>'; return; }
+  ul.innerHTML = tasks.map(t => `
+    <li class="${t.done?'done':''}" data-id="${t.id}">
+      <input type="checkbox" ${t.done?'checked':''} data-act="toggle">
+      <span>${t.text}</span>
+      <button data-act="del">×</button>
+    </li>
+  `).join('');
+  ul.querySelectorAll('li').forEach(li=>{
+    const id = Number(li.dataset.id);
+    li.querySelector('[data-act="toggle"]').addEventListener('change', ()=>{
+      const t = tasks.find(t=>t.id===id);
+      if(t){ t.done = !t.done; saveTasks(); renderTasks(); }
+    });
+    li.querySelector('[data-act="del"]').addEventListener('click', ()=>{
+      tasks = tasks.filter(t=>t.id!==id);
+      saveTasks(); renderTasks();
+    });
+  });
+}
+
+function render(){ renderCalendar(); renderPosts(); }
+
+document.getElementById('prevMonth').addEventListener('click', ()=>{ cur.setMonth(cur.getMonth()-1); selectedDay=null; render(); });
+document.getElementById('nextMonth').addEventListener('click', ()=>{ cur.setMonth(cur.getMonth()+1); selectedDay=null; render(); });
+document.getElementById('brandFilter').addEventListener('change', render);
+
+['filterType','filterObjetivo','filterState','filterFrom','filterTo'].forEach(id => {
+  document.getElementById(id).addEventListener('change', () => { syncFiltersFromUI(); render(); });
+});
+document.getElementById('filterSearch').addEventListener('input', () => { syncFiltersFromUI(); render(); });
+document.getElementById('filterClear').addEventListener('click', () => {
+  filters = { tipo:'all', objetivo:'all', estado:'all', from:'', to:'', search:'' };
+  document.getElementById('filterType').value = 'all';
+  document.getElementById('filterObjetivo').value = 'all';
+  document.getElementById('filterState').value = 'all';
+  document.getElementById('filterFrom').value = '';
+  document.getElementById('filterTo').value = '';
+  document.getElementById('filterSearch').value = '';
+  render();
+});
+document.querySelectorAll('th.sortable').forEach(th => {
+  th.addEventListener('click', () => {
+    const f = th.dataset.field;
+    if(sortState.field===f){ sortState.dir *= -1; } else { sortState.field=f; sortState.dir=1; }
+    render();
+  });
+});
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+document.getElementById('optionsToggle').addEventListener('click', () => {
+  const body = document.getElementById('optionsBody');
+  const open = body.classList.toggle('open');
+  document.getElementById('optionsToggle').textContent = 'Configurar opciones de los combos ' + (open ? '▴' : '▾');
+});
+
+let pendingImg = null;
+document.getElementById('nImg').addEventListener('change', (e)=>{
+  const f = e.target.files[0];
+  if(!f){ pendingImg = null; return; }
+  const reader = new FileReader();
+  reader.onload = ()=>{ pendingImg = reader.result; };
+  reader.readAsDataURL(f);
+});
+
+document.getElementById('addPost').addEventListener('click', ()=>{
+  const date = document.getElementById('nDate').value;
+  if(!date) return;
+  posts.push({
+    id: nextPostId++,
+    date,
+    brand: document.getElementById('nBrand').value,
+    type: document.getElementById('nType').value,
+    objetivo: document.getElementById('nObjetivo').value,
+    desc: document.getElementById('nDesc').value.trim(),
+    state: document.getElementById('nState').value,
+    resp: document.getElementById('nResp').value.trim(),
+    comments: document.getElementById('nComments').value.trim(),
+    img: pendingImg
+  });
+  savePosts();
+  document.getElementById('nDesc').value = '';
+  document.getElementById('nResp').value = '';
+  document.getElementById('nComments').value = '';
+  document.getElementById('nImg').value = '';
+  pendingImg = null;
+  render();
+});
+
+document.getElementById('taskAdd').addEventListener('click', addTask);
+document.getElementById('taskInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter') addTask(); });
+function addTask(){
+  const input = document.getElementById('taskInput');
+  const text = input.value.trim();
+  if(!text) return;
+  tasks.push({ id: nextTaskId++, text, done:false });
+  saveTasks();
+  input.value = '';
+  renderTasks();
+}
+
+fillStaticSelects();
+fillFilterSelects();
+renderOptionsPanel();
+render();
+renderTasks();
+</script>
+</body>
+</html>
