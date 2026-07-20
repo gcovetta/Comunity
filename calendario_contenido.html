@@ -220,6 +220,7 @@
           <span id="dayFilterLabel"></span>
         </div>
         <div class="filter-bar">
+          <select id="filterBrand"></select>
           <select id="filterType"></select>
           <select id="filterObjetivo"></select>
           <select id="filterState"></select>
@@ -315,7 +316,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
-const APP_VERSION = 'v3.0';
+const APP_VERSION = 'v3.1';
 const APP_UPDATED = '20 jul 2026';
 
 const SUPABASE_URL = 'https://daxxfqquhzqmhpwiwsok.supabase.co';
@@ -464,12 +465,15 @@ function fillStaticSelects(){
 }
 
 function fillFilterSelects(){
+  const b = document.getElementById('filterBrand').value || 'all';
   const t = document.getElementById('filterType').value || 'all';
   const o = document.getElementById('filterObjetivo').value || 'all';
   const s = document.getElementById('filterState').value || 'all';
+  document.getElementById('filterBrand').innerHTML = '<option value="all">Todas las marcas</option>' + OPTIONS.marca.map(m=>`<option>${m}</option>`).join('');
   document.getElementById('filterType').innerHTML = '<option value="all">Todos los tipos</option>' + OPTIONS.tipo.map(m=>`<option>${m}</option>`).join('');
   document.getElementById('filterObjetivo').innerHTML = '<option value="all">Todos los objetivos</option>' + OPTIONS.objetivo.map(m=>`<option>${m}</option>`).join('');
   document.getElementById('filterState').innerHTML = '<option value="all">Todos los estados</option>' + OPTIONS.estado.map(m=>`<option>${m}</option>`).join('');
+  document.getElementById('filterBrand').value = b;
   document.getElementById('filterType').value = t;
   document.getElementById('filterObjetivo').value = o;
   document.getElementById('filterState').value = s;
@@ -680,7 +684,14 @@ function render(){ renderCalendar(); renderPosts(); renderDashboard(); }
 
 document.getElementById('prevMonth').addEventListener('click', ()=>{ cur.setMonth(cur.getMonth()-1); selectedDay=null; render(); });
 document.getElementById('nextMonth').addEventListener('click', ()=>{ cur.setMonth(cur.getMonth()+1); selectedDay=null; render(); });
-document.getElementById('brandFilter').addEventListener('change', render);
+document.getElementById('brandFilter').addEventListener('change', () => {
+  document.getElementById('filterBrand').value = document.getElementById('brandFilter').value;
+  render();
+});
+document.getElementById('filterBrand').addEventListener('change', () => {
+  document.getElementById('brandFilter').value = document.getElementById('filterBrand').value;
+  render();
+});
 document.getElementById('refreshBtn').addEventListener('click', loadAll);
 
 ['filterType','filterObjetivo','filterState','filterFrom','filterTo'].forEach(id => {
@@ -689,6 +700,8 @@ document.getElementById('refreshBtn').addEventListener('click', loadAll);
 document.getElementById('filterSearch').addEventListener('input', () => { syncFiltersFromUI(); render(); });
 document.getElementById('filterClear').addEventListener('click', () => {
   filters = { tipo:'all', objetivo:'all', estado:'all', from:'', to:'', search:'' };
+  document.getElementById('filterBrand').value = 'all';
+  document.getElementById('brandFilter').value = 'all';
   document.getElementById('filterType').value = 'all';
   document.getElementById('filterObjetivo').value = 'all';
   document.getElementById('filterState').value = 'all';
