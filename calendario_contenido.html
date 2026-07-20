@@ -89,6 +89,8 @@
   .filter-bar select, .filter-bar input[type=date]{width:auto;}
   .filter-bar input[type=text]{flex:1; min-width:200px;}
 
+  .app > section.add-post{margin-top:20px;}
+
   table.posts-table{width:100%; min-width:760px; border-collapse:collapse; table-layout:fixed;}
   table.posts-table th{
     text-align:left; font-size:11px; color:var(--text-muted); text-transform:uppercase;
@@ -121,14 +123,6 @@
   ul#taskList li span{flex:1; word-break:break-word;}
   ul#taskList li.done span{text-decoration:line-through; color:var(--text-muted);}
   ul#taskList li button{padding:3px 7px; font-size:12px;}
-
-  .sidebar-add-post{
-    background:none; border:none; padding:0; margin:20px 0 0; border-top:1px solid var(--border); padding-top:16px;
-  }
-  .sidebar-add-post .form-grid{grid-template-columns:1fr;}
-  .sidebar-add-post .desc-row{flex-direction:column;}
-  .sidebar-add-post .desc-row input[type=text]{min-width:0;}
-  .sidebar-add-post button.primary{width:100%;}
 
   .brand{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;}
   .brand-mark{font-size:26px; line-height:1; white-space:nowrap;}
@@ -171,7 +165,6 @@
     .chip{font-size:8px; padding:1px 3px;}
     .more{font-size:8px;}
     section.add-post, section.options, section.posts{padding:12px 14px;}
-    .sidebar-add-post{padding:16px 0 0; border-top:1px solid var(--border); margin-top:16px;}
     .form-grid, .desc-row{grid-template-columns:1fr; flex-direction:column;}
     .desc-row input[type=text]{min-width:0;}
     .filter-bar{flex-direction:column; align-items:stretch;}
@@ -259,33 +252,33 @@
         <button class="primary" id="taskAdd">+</button>
       </div>
       <ul id="taskList"></ul>
-
-      <section class="add-post sidebar-add-post">
-        <h2>Nueva publicación</h2>
-        <div class="form-grid">
-          <input type="date" id="nDate" value="2026-07-20">
-          <select id="nBrand"></select>
-          <select id="nType"></select>
-          <select id="nObjetivo"></select>
-          <select id="nState"></select>
-        </div>
-        <div class="desc-row">
-          <input type="file" id="nImg" accept="image/*">
-          <input type="text" id="nDesc" placeholder="Descripción">
-          <input type="text" id="nResp" placeholder="Responsable">
-          <input type="text" id="nComments" placeholder="Comentarios">
-          <button class="primary" id="addPost">Agregar</button>
-        </div>
-      </section>
     </aside>
   </div>
+
+  <section class="add-post">
+    <h2>Nueva publicación</h2>
+    <div class="form-grid">
+      <input type="date" id="nDate" value="2026-07-20">
+      <select id="nBrand"></select>
+      <select id="nType"></select>
+      <select id="nObjetivo"></select>
+      <select id="nState"></select>
+    </div>
+    <div class="desc-row">
+      <input type="file" id="nImg" accept="image/*">
+      <input type="text" id="nDesc" placeholder="Descripción">
+      <input type="text" id="nResp" placeholder="Responsable">
+      <input type="text" id="nComments" placeholder="Comentarios">
+      <button class="primary" id="addPost">Agregar</button>
+    </div>
+  </section>
 
   <footer id="versionTag" class="version-tag"></footer>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
-const APP_VERSION = 'v2.2';
+const APP_VERSION = 'v2.3';
 const APP_UPDATED = '20 jul 2026';
 
 const SUPABASE_URL = 'https://daxxfqquhzqmhpwiwsok.supabase.co';
