@@ -122,6 +122,14 @@
   ul#taskList li.done span{text-decoration:line-through; color:var(--text-muted);}
   ul#taskList li button{padding:3px 7px; font-size:12px;}
 
+  .sidebar-add-post{
+    background:none; border:none; padding:0; margin:20px 0 0; border-top:1px solid var(--border); padding-top:16px;
+  }
+  .sidebar-add-post .form-grid{grid-template-columns:1fr;}
+  .sidebar-add-post .desc-row{flex-direction:column;}
+  .sidebar-add-post .desc-row input[type=text]{min-width:0;}
+  .sidebar-add-post button.primary{width:100%;}
+
   .brand{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;}
   .brand-mark{font-size:26px; line-height:1; white-space:nowrap;}
   .brand-mark .serif{font-family:Georgia,"Times New Roman",serif; font-style:italic; font-weight:400; color:var(--text);}
@@ -163,6 +171,7 @@
     .chip{font-size:8px; padding:1px 3px;}
     .more{font-size:8px;}
     section.add-post, section.options, section.posts{padding:12px 14px;}
+    .sidebar-add-post{padding:16px 0 0; border-top:1px solid var(--border); margin-top:16px;}
     .form-grid, .desc-row{grid-template-columns:1fr; flex-direction:column;}
     .desc-row input[type=text]{min-width:0;}
     .filter-bar{flex-direction:column; align-items:stretch;}
@@ -236,7 +245,22 @@
       </div>
 
       <div id="tab-config" class="tab-panel">
-      <section class="add-post">
+      <section class="options">
+        <button class="options-toggle" id="optionsToggle">Configurar opciones de los combos ▾</button>
+        <div class="options-body" id="optionsBody"></div>
+      </section>
+      </div>
+    </main>
+
+    <aside class="tasks">
+      <h2>Tareas</h2>
+      <div class="task-add">
+        <input type="text" id="taskInput" placeholder="Nueva tarea">
+        <button class="primary" id="taskAdd">+</button>
+      </div>
+      <ul id="taskList"></ul>
+
+      <section class="add-post sidebar-add-post">
         <h2>Nueva publicación</h2>
         <div class="form-grid">
           <input type="date" id="nDate" value="2026-07-20">
@@ -253,21 +277,6 @@
           <button class="primary" id="addPost">Agregar</button>
         </div>
       </section>
-
-      <section class="options">
-        <button class="options-toggle" id="optionsToggle">Configurar opciones de los combos ▾</button>
-        <div class="options-body" id="optionsBody"></div>
-      </section>
-      </div>
-    </main>
-
-    <aside class="tasks">
-      <h2>Tareas</h2>
-      <div class="task-add">
-        <input type="text" id="taskInput" placeholder="Nueva tarea">
-        <button class="primary" id="taskAdd">+</button>
-      </div>
-      <ul id="taskList"></ul>
     </aside>
   </div>
 
@@ -276,7 +285,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
-const APP_VERSION = 'v2.1';
+const APP_VERSION = 'v2.2';
 const APP_UPDATED = '20 jul 2026';
 
 const SUPABASE_URL = 'https://daxxfqquhzqmhpwiwsok.supabase.co';
