@@ -47,8 +47,7 @@
   .tab-panel{display:none;}
   .tab-panel.active{display:block;}
 
-  .layout{display:grid; grid-template-columns:1fr 280px; gap:24px; align-items:start;}
-  @media (max-width:900px){ .layout{grid-template-columns:1fr;} }
+  .layout{display:block;}
 
   .calendar-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-bottom:24px;}
   .dow{font-size:11px; color:var(--text-muted); text-align:center; padding:4px 0; font-weight:600;}
@@ -253,9 +252,9 @@
 
   <div class="tabs">
     <button class="tab-btn active" data-tab="calendar">Calendario</button>
-    <button class="tab-btn" data-tab="dashboard">Dashboard</button>
     <button class="tab-btn" data-tab="task">Task</button>
-    <button class="tab-btn" data-tab="config">Cargar y configurar</button>
+    <button class="tab-btn" data-tab="config">Configurar Combos</button>
+    <button class="tab-btn" data-tab="dashboard">Dashboard</button>
   </div>
 
   <div class="layout">
@@ -408,15 +407,6 @@
       </section>
       </div>
     </main>
-
-    <aside class="tasks">
-      <h2>Tareas</h2>
-      <div class="task-add">
-        <input type="text" id="taskInput" placeholder="Nueva tarea">
-        <button class="primary" id="taskAdd">+</button>
-      </div>
-      <ul id="taskList"></ul>
-    </aside>
   </div>
 
   <section class="add-post" id="newPostSection">
@@ -443,7 +433,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
-const APP_VERSION = 'v4.8';
+const APP_VERSION = 'v4.9';
 const APP_UPDATED = '20 jul 2026';
 
 const SUPABASE_URL = 'https://daxxfqquhzqmhpwiwsok.supabase.co';
@@ -816,6 +806,7 @@ function renderPosts(){
 
 function renderTasks(){
   const ul = document.getElementById('taskList');
+  if(!ul) return;
   if(tasks.length===0){ ul.innerHTML = '<p class="empty-msg">Sin tareas.</p>'; return; }
   ul.innerHTML = tasks.map(t => `
     <li class="${t.state==='Completada'?'done':''}" data-id="${t.id}">
@@ -1240,20 +1231,6 @@ document.getElementById('addPost').addEventListener('click', async ()=>{
   render();
 });
 
-document.getElementById('taskAdd').addEventListener('click', addTask);
-document.getElementById('taskInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter') addTask(); });
-async function addTask(){
-  const input = document.getElementById('taskInput');
-  const text = input.value.trim();
-  if(!text) return;
-  input.value = '';
-  const { data, error } = await sb.from('tasks').insert({ text, done:false, state:'Pendiente' }).select().single();
-  if(error){ alert('No se pudo guardar la tarea: ' + error.message); return; }
-  tasks.push(rowToTask(data));
-  renderTasks();
-  renderTasksTable();
-  renderMetrics();
-}
 
 document.getElementById('addTaskFull').addEventListener('click', async ()=>{
   const name = document.getElementById('tName').value.trim();
