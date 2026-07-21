@@ -365,7 +365,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
-const APP_VERSION = 'v4.1';
+const APP_VERSION = 'v4.2';
 const APP_UPDATED = '20 jul 2026';
 
 const SUPABASE_URL = 'https://daxxfqquhzqmhpwiwsok.supabase.co';
@@ -767,14 +767,19 @@ function renderTasksTable(){
 
   body.innerHTML = tasks.map(t => {
     const sc = taskStateColor(t.state);
+    const linkedPost = t.postId ? posts.find(p=>p.id===t.postId) : null;
+    const mc = linkedPost ? marcaColor(linkedPost.brand) : null;
+    const fieldStyle = mc ? `background:${mc.bg}; border-color:${mc.bg};` : '';
+    const rowStyle = mc ? `background:${mc.bg};` : '';
+    const firstCellStyle = mc ? `background:${mc.bg}; border-left:3px solid ${mc.fg};` : '';
     return `
-    <tr data-id="${t.id}">
-      <td><input type="text" data-field="text" value="${esc(t.text)}" placeholder="Nombre"></td>
-      <td><input type="text" data-field="comments" value="${esc(t.comments)}" placeholder="Comentario"></td>
-      <td class="col-date"><input type="date" data-field="dueDate" value="${t.dueDate || ''}"></td>
+    <tr data-id="${t.id}" style="${rowStyle}">
+      <td style="${firstCellStyle}"><input type="text" data-field="text" value="${esc(t.text)}" placeholder="Nombre" style="${fieldStyle}"></td>
+      <td><input type="text" data-field="comments" value="${esc(t.comments)}" placeholder="Comentario" style="${fieldStyle}"></td>
+      <td class="col-date"><input type="date" data-field="dueDate" value="${t.dueDate || ''}" style="${fieldStyle}"></td>
       <td><select data-field="state" style="background:${sc.bg}; color:${sc.fg}; border-color:${sc.bg}; font-weight:500;">${TASK_STATE_OPTIONS.map(s=>`<option ${s===t.state?'selected':''}>${s}</option>`).join('')}</select></td>
-      <td><select data-field="postId">${postOptionsHtml(t.postId)}</select></td>
-      <td class="col-actions-wide">
+      <td><select data-field="postId" style="${fieldStyle} ${mc?`color:${mc.fg}; font-weight:500;`:''}">${postOptionsHtml(t.postId)}</select></td>
+      <td class="col-actions-wide" style="${rowStyle}">
         <div class="row-actions">
           <button class="icon-btn ${t.state==='Completada'?'success active':'success'}" data-act="complete" title="${t.state==='Completada'?'Marcar como pendiente':'Marcar como completada'}" aria-label="Completar">${ICON_CHECK}</button>
           <button class="icon-btn danger" data-act="del" title="Eliminar" aria-label="Eliminar">${ICON_TRASH}</button>
@@ -798,6 +803,9 @@ function renderTasksTable(){
           renderTasks();
           renderTasksTable();
           renderMetrics();
+        }
+        if(field==='postId'){
+          renderTasksTable();
         }
         setSync('saving', 'Guardando…');
         const dbField = field==='dueDate' ? 'due_date' : field==='postId' ? 'post_id' : field;
