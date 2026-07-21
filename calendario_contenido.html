@@ -71,9 +71,11 @@
   .desc-row{display:flex; gap:8px; flex-wrap:wrap;}
   .desc-row input[type=text]{flex:1; min-width:180px;}
 
-  .options-toggle{background:none; border:none; padding:0; color:var(--accent); font-size:13px; cursor:pointer;}
+  .options-toggle, .collapse-toggle{background:none; border:none; padding:0; color:var(--accent); font-size:13px; cursor:pointer;}
   .options-body{display:none; margin-top:14px;}
   .options-body.open{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px;}
+  .collapse-body{display:none;}
+  .collapse-body.open{display:block;}
   .opt-group h3{font-size:12px; color:var(--text-2); margin:0 0 8px; font-weight:600;}
   .opt-chips{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;}
   .opt-chip{display:flex; align-items:center; gap:5px; font-size:12px; padding:3px 4px 3px 9px; border-radius:14px; background:var(--bg); border:1px solid var(--border-strong);}
@@ -106,8 +108,9 @@
     text-align:left; font-size:11px; color:var(--text-muted); text-transform:uppercase;
     letter-spacing:.02em; padding:8px 8px; border-bottom:1px solid var(--border-strong); font-weight:600;
   }
-  table.posts-table th.sortable{cursor:pointer; user-select:none;}
-  table.posts-table th.sortable:hover{color:var(--text);}
+  table.posts-table th.sortable, table.posts-table th.task-sortable{cursor:pointer; user-select:none;}
+  table.posts-table th.sortable:hover, table.posts-table th.task-sortable:hover{color:var(--text);}
+  tr.group-start td{border-top:1px dashed var(--border-strong);}
   .sort-arrow{margin-left:3px; font-size:9px;}
   table.posts-table td{padding:8px 8px; border-bottom:1px solid var(--border); vertical-align:middle;}
   table.posts-table select, table.posts-table input[type=text], table.posts-table input[type=date]{
@@ -117,6 +120,21 @@
   th.col-thumb, td.col-thumb{width:52px;}
   th.col-actions, td.col-actions{width:52px; text-align:right;}
   th.col-actions-wide, td.col-actions-wide{width:76px; text-align:right;}
+  th.col-avatar, td.col-avatar{width:52px; text-align:center;}
+
+  .assignee-row{display:flex; align-items:center; gap:10px; margin-bottom:8px;}
+  .assignee-label{font-size:12px; color:var(--text-secondary,var(--text-2));}
+  .assignee-picker{display:flex; gap:6px;}
+  .avatar-btn{
+    width:32px; height:32px; padding:0; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    border:2px solid var(--border-strong); background:var(--bg);
+  }
+  .avatar-btn.selected{border-color:var(--accent); background:var(--accent-bg);}
+  .avatar-cell{
+    width:26px; height:26px; padding:0; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
+    border:none; background:none;
+  }
+  .avatar-cell:hover{background:var(--bg);}
 
   .icon-btn{
     display:inline-flex; align-items:center; justify-content:center;
@@ -296,6 +314,14 @@
           <select id="tState"></select>
           <select id="tPost"></select>
         </div>
+        <div class="assignee-row">
+          <span class="assignee-label">Asignar a</span>
+          <div class="assignee-picker" id="tAssigneeGroup">
+            <button type="button" class="avatar-btn" data-assignee="Flor" title="Flor"></button>
+            <button type="button" class="avatar-btn" data-assignee="Marce" title="Marce"></button>
+            <button type="button" class="avatar-btn" data-assignee="Ambas" title="Ambas"></button>
+          </div>
+        </div>
         <div class="desc-row">
           <input type="text" id="tComment" placeholder="Comentario">
           <button class="primary" id="addTaskFull">Agregar tarea</button>
@@ -304,15 +330,25 @@
 
       <section class="posts">
         <div class="posts-header"><h2>Tareas</h2></div>
+        <div class="filter-bar">
+          <select id="filterTaskState"></select>
+          <select id="filterTaskPost"></select>
+          <select id="filterTaskAssignee"></select>
+          <input type="date" id="filterTaskFrom" title="Fecha fin desde">
+          <input type="date" id="filterTaskTo" title="Fecha fin hasta">
+          <input type="text" id="filterTaskSearch" placeholder="Buscar en nombre o comentario">
+          <button id="filterTaskClear">Limpiar filtros</button>
+        </div>
         <div style="overflow-x:auto;">
           <table class="posts-table">
             <thead>
               <tr>
-                <th>Nombre</th>
-                <th>Comentario</th>
-                <th class="col-date">Fecha fin</th>
-                <th>Estado</th>
-                <th>Publicación asociada</th>
+                <th class="task-sortable" data-field="text">Nombre<span class="sort-arrow"></span></th>
+                <th class="task-sortable" data-field="comments">Comentario<span class="sort-arrow"></span></th>
+                <th class="col-date task-sortable" data-field="dueDate">Fecha fin<span class="sort-arrow"></span></th>
+                <th class="task-sortable" data-field="state">Estado<span class="sort-arrow"></span></th>
+                <th class="task-sortable" data-field="postId">Publicación asociada<span class="sort-arrow"></span></th>
+                <th class="col-avatar task-sortable" data-field="assignee">Asignado<span class="sort-arrow"></span></th>
                 <th class="col-actions-wide"></th>
               </tr>
             </thead>
@@ -320,6 +356,29 @@
           </table>
         </div>
         <div id="emptyTasks"></div>
+      </section>
+
+      <section class="posts">
+        <button class="collapse-toggle" id="completedToggle">Tareas completadas (0) ▾</button>
+        <div class="collapse-body" id="completedCollapse">
+          <div style="overflow-x:auto; margin-top:14px;">
+            <table class="posts-table">
+              <thead>
+                <tr>
+                  <th class="task-sortable" data-field="text">Nombre<span class="sort-arrow"></span></th>
+                  <th class="task-sortable" data-field="comments">Comentario<span class="sort-arrow"></span></th>
+                  <th class="col-date task-sortable" data-field="dueDate">Fecha fin<span class="sort-arrow"></span></th>
+                  <th class="task-sortable" data-field="state">Estado<span class="sort-arrow"></span></th>
+                  <th class="task-sortable" data-field="postId">Publicación asociada<span class="sort-arrow"></span></th>
+                  <th class="col-avatar task-sortable" data-field="assignee">Asignado<span class="sort-arrow"></span></th>
+                  <th class="col-actions-wide"></th>
+                </tr>
+              </thead>
+              <tbody id="completedTasksBody"></tbody>
+            </table>
+          </div>
+          <div id="emptyCompletedTasks"></div>
+        </div>
       </section>
       </div>
 
@@ -341,7 +400,7 @@
     </aside>
   </div>
 
-  <section class="add-post">
+  <section class="add-post" id="newPostSection">
     <h2>Nueva publicación</h2>
     <div class="form-grid">
       <input type="date" id="nDate" value="2026-07-20">
@@ -365,7 +424,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
-const APP_VERSION = 'v4.2';
+const APP_VERSION = 'v4.5';
 const APP_UPDATED = '20 jul 2026';
 
 const SUPABASE_URL = 'https://daxxfqquhzqmhpwiwsok.supabase.co';
@@ -380,6 +439,9 @@ let cur = new Date(2026, 6, 1);
 let selectedDay = null;
 let filters = { tipo:'all', objetivo:'all', estado:'all', from:'', to:'', search:'' };
 let sortState = { field:'date', dir:1 };
+let taskFilters = { state:'all', post:'all', assignee:'all', from:'', to:'', search:'' };
+let selectedAssignee = null;
+let taskSortState = { field:'text', dir:1 };
 
 const PALETTE = [
   {bg:'#e1f5f2', fg:'#0f766e'}, {bg:'#fdece1', fg:'#c2510c'}, {bg:'#fbe6f0', fg:'#a6296b'},
@@ -467,6 +529,18 @@ function esc(s){ return (s||'').replace(/"/g,'&quot;'); }
 const ICON_TRASH = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>';
 const ICON_CHECK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
 
+const ASSIGNEE_OPTIONS = ['Flor','Marce','Ambas'];
+const AVATAR_FLOR = '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="10" r="10" fill="#d85a30"/><circle cx="12" cy="13" r="7.5" fill="#f0c9a0"/><circle cx="9" cy="13" r="1" fill="#2c2c2a"/><circle cx="15" cy="13" r="1" fill="#2c2c2a"/><path d="M9 16.5c1 1 4 1 6 0" stroke="#2c2c2a" stroke-width="1.2" fill="none" stroke-linecap="round"/></svg>';
+const AVATAR_MARCE = '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="10" r="10" fill="#3c2415"/><circle cx="12" cy="13" r="7.5" fill="#f0c9a0"/><circle cx="9" cy="13" r="1" fill="#2c2c2a"/><circle cx="15" cy="13" r="1" fill="#2c2c2a"/><path d="M9 16.5c1 1 4 1 6 0" stroke="#2c2c2a" stroke-width="1.2" fill="none" stroke-linecap="round"/></svg>';
+const AVATAR_AMBAS = '<svg width="24" height="18" viewBox="0 0 32 24" aria-hidden="true"><circle cx="10" cy="9" r="8.5" fill="#d85a30"/><circle cx="10" cy="12" r="6.3" fill="#f0c9a0"/><circle cx="7.8" cy="12" r="0.8" fill="#2c2c2a"/><circle cx="12.2" cy="12" r="0.8" fill="#2c2c2a"/><circle cx="21" cy="9" r="8.5" fill="#3c2415"/><circle cx="21" cy="12" r="6.3" fill="#f0c9a0"/><circle cx="18.8" cy="12" r="0.8" fill="#2c2c2a"/><circle cx="23.2" cy="12" r="0.8" fill="#2c2c2a"/></svg>';
+const AVATAR_NONE = '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="var(--border-strong)" stroke-width="1.5" stroke-dasharray="3 3"/></svg>';
+function avatarFor(name){
+  if(name==='Flor') return AVATAR_FLOR;
+  if(name==='Marce') return AVATAR_MARCE;
+  if(name==='Ambas') return AVATAR_AMBAS;
+  return AVATAR_NONE;
+}
+
 function setSync(state, text){
   const el = document.getElementById('connStatus');
   el.className = 'conn-badge ' + state;
@@ -477,7 +551,7 @@ function rowToPost(r){
   return { id:r.id, date:r.date, brand:r.brand, type:r.type, objetivo:r.objetivo, desc:r.description || '', state:r.state, resp:r.resp || '', comments:r.comments || '', img:r.img_url || null };
 }
 function rowToTask(r){
-  return { id:r.id, text:r.text || '', done:r.done, comments:r.comments || '', dueDate:r.due_date || '', state:r.state || 'Pendiente', postId:r.post_id ?? null };
+  return { id:r.id, text:r.text || '', done:r.done, comments:r.comments || '', dueDate:r.due_date || '', state:r.state || 'Pendiente', postId:r.post_id ?? null, assignee:r.assignee || null };
 }
 const TASK_STATE_OPTIONS = ['Pendiente','En curso','Completada'];
 function taskStateColor(v){
@@ -751,34 +825,61 @@ function fillTaskFormSelects(){
     posts.map(p => `<option value="${p.id}">${esc(postLabel(p))}</option>`).join('');
 }
 
-function renderTasksTable(){
-  const body = document.getElementById('tasksBody');
-  const emptyEl = document.getElementById('emptyTasks');
-  if(!body) return;
-  fillTaskFormSelects();
-  if(tasks.length===0){
-    body.innerHTML = '';
-    emptyEl.innerHTML = '<p class="empty-msg">No hay tareas cargadas.</p>';
-    return;
-  }
-  emptyEl.innerHTML = '';
-  const postOptionsHtml = (selectedId) => '<option value="">Sin publicación asociada</option>' +
-    posts.map(p => `<option value="${p.id}" ${Number(selectedId)===p.id?'selected':''}>${esc(postLabel(p))}</option>`).join('');
+function fillTaskFilterSelects(){
+  const s = document.getElementById('filterTaskState').value || 'all';
+  const pv = document.getElementById('filterTaskPost').value || 'all';
+  const av = document.getElementById('filterTaskAssignee').value || 'all';
+  document.getElementById('filterTaskState').innerHTML = '<option value="all">Todos los estados</option>' +
+    TASK_STATE_OPTIONS.map(o => `<option>${o}</option>`).join('');
+  document.getElementById('filterTaskPost').innerHTML = '<option value="all">Todas las publicaciones</option><option value="none">Sin publicación asociada</option>' +
+    posts.map(p => `<option value="${p.id}">${esc(postLabel(p))}</option>`).join('');
+  document.getElementById('filterTaskAssignee').innerHTML = '<option value="all">Todos los asignados</option><option value="none">Sin asignar</option>' +
+    ASSIGNEE_OPTIONS.map(o => `<option>${o}</option>`).join('');
+  document.getElementById('filterTaskState').value = s;
+  document.getElementById('filterTaskPost').value = pv;
+  document.getElementById('filterTaskAssignee').value = av;
+}
 
-  body.innerHTML = tasks.map(t => {
+function syncTaskFiltersFromUI(){
+  taskFilters.state = document.getElementById('filterTaskState').value;
+  taskFilters.post = document.getElementById('filterTaskPost').value;
+  taskFilters.assignee = document.getElementById('filterTaskAssignee').value;
+  taskFilters.from = document.getElementById('filterTaskFrom').value;
+  taskFilters.to = document.getElementById('filterTaskTo').value;
+  taskFilters.search = document.getElementById('filterTaskSearch').value.trim().toLowerCase();
+}
+
+function updateTaskSortIndicators(){
+  document.querySelectorAll('th.task-sortable').forEach(th => {
+    const span = th.querySelector('.sort-arrow');
+    span.textContent = th.dataset.field===taskSortState.field ? (taskSortState.dir===1 ? '▲' : '▼') : '';
+  });
+}
+
+function taskPostOptionsHtml(selectedId){
+  return '<option value="">Sin publicación asociada</option>' +
+    posts.map(p => `<option value="${p.id}" ${Number(selectedId)===p.id?'selected':''}>${esc(postLabel(p))}</option>`).join('');
+}
+
+function buildTaskRowsHtml(list, groupByPost){
+  let prevPostId;
+  return list.map((t, i) => {
     const sc = taskStateColor(t.state);
     const linkedPost = t.postId ? posts.find(p=>p.id===t.postId) : null;
     const mc = linkedPost ? marcaColor(linkedPost.brand) : null;
     const fieldStyle = mc ? `background:${mc.bg}; border-color:${mc.bg};` : '';
     const rowStyle = mc ? `background:${mc.bg};` : '';
     const firstCellStyle = mc ? `background:${mc.bg}; border-left:3px solid ${mc.fg};` : '';
+    const isNewGroup = groupByPost && i>0 && prevPostId!==t.postId;
+    prevPostId = t.postId;
     return `
-    <tr data-id="${t.id}" style="${rowStyle}">
+    <tr data-id="${t.id}" class="${isNewGroup?'group-start':''}" style="${rowStyle}">
       <td style="${firstCellStyle}"><input type="text" data-field="text" value="${esc(t.text)}" placeholder="Nombre" style="${fieldStyle}"></td>
       <td><input type="text" data-field="comments" value="${esc(t.comments)}" placeholder="Comentario" style="${fieldStyle}"></td>
       <td class="col-date"><input type="date" data-field="dueDate" value="${t.dueDate || ''}" style="${fieldStyle}"></td>
       <td><select data-field="state" style="background:${sc.bg}; color:${sc.fg}; border-color:${sc.bg}; font-weight:500;">${TASK_STATE_OPTIONS.map(s=>`<option ${s===t.state?'selected':''}>${s}</option>`).join('')}</select></td>
-      <td><select data-field="postId" style="${fieldStyle} ${mc?`color:${mc.fg}; font-weight:500;`:''}">${postOptionsHtml(t.postId)}</select></td>
+      <td><select data-field="postId" style="${fieldStyle} ${mc?`color:${mc.fg}; font-weight:500;`:''}">${taskPostOptionsHtml(t.postId)}</select></td>
+      <td class="col-avatar" style="${rowStyle}"><button type="button" class="avatar-cell" data-act="cycle-assignee" title="${t.assignee || 'Sin asignar'} (click para cambiar)" aria-label="Asignado a ${t.assignee || 'nadie'}">${avatarFor(t.assignee)}</button></td>
       <td class="col-actions-wide" style="${rowStyle}">
         <div class="row-actions">
           <button class="icon-btn ${t.state==='Completada'?'success active':'success'}" data-act="complete" title="${t.state==='Completada'?'Marcar como pendiente':'Marcar como completada'}" aria-label="Completar">${ICON_CHECK}</button>
@@ -787,8 +888,10 @@ function renderTasksTable(){
       </td>
     </tr>`;
   }).join('');
+}
 
-  body.querySelectorAll('tr').forEach(row => {
+function wireTaskRows(bodyEl){
+  bodyEl.querySelectorAll('tr').forEach(row => {
     const id = Number(row.dataset.id);
     row.querySelectorAll('[data-field]').forEach(el => {
       const evt = el.tagName==='SELECT' ? 'change' : 'input';
@@ -837,7 +940,75 @@ function renderTasksTable(){
       const { error } = await sb.from('tasks').delete().eq('id', id);
       setSync(error ? 'error' : 'ok', error ? 'Error al borrar' : 'Conectado a Supabase');
     });
+    row.querySelector('[data-act="cycle-assignee"]').addEventListener('click', async () => {
+      const t = tasks.find(x=>x.id===id);
+      if(!t) return;
+      const order = [null, ...ASSIGNEE_OPTIONS];
+      const idx = order.indexOf(t.assignee || null);
+      t.assignee = order[(idx + 1) % order.length];
+      renderTasksTable();
+      setSync('saving', 'Guardando…');
+      const { error } = await sb.from('tasks').update({ assignee: t.assignee }).eq('id', id);
+      setSync(error ? 'error' : 'ok', error ? 'Error al guardar' : 'Conectado a Supabase');
+    });
   });
+}
+
+function updateCompletedToggleLabel(count){
+  const toggle = document.getElementById('completedToggle');
+  const open = document.getElementById('completedCollapse').classList.contains('open');
+  toggle.textContent = `Tareas completadas (${count}) ` + (open ? '▴' : '▾');
+}
+
+function renderTasksTable(){
+  const body = document.getElementById('tasksBody');
+  const emptyEl = document.getElementById('emptyTasks');
+  const cBody = document.getElementById('completedTasksBody');
+  const cEmptyEl = document.getElementById('emptyCompletedTasks');
+  if(!body) return;
+  fillTaskFormSelects();
+  fillTaskFilterSelects();
+
+  let filtered = tasks.slice();
+  if(taskFilters.state!=='all') filtered = filtered.filter(t => t.state===taskFilters.state);
+  if(taskFilters.post==='none') filtered = filtered.filter(t => !t.postId);
+  else if(taskFilters.post!=='all') filtered = filtered.filter(t => t.postId===Number(taskFilters.post));
+  if(taskFilters.assignee==='none') filtered = filtered.filter(t => !t.assignee);
+  else if(taskFilters.assignee!=='all') filtered = filtered.filter(t => t.assignee===taskFilters.assignee);
+  if(taskFilters.from) filtered = filtered.filter(t => t.dueDate && t.dueDate >= taskFilters.from);
+  if(taskFilters.to) filtered = filtered.filter(t => t.dueDate && t.dueDate <= taskFilters.to);
+  if(taskFilters.search) filtered = filtered.filter(t => `${t.text} ${t.comments}`.toLowerCase().includes(taskFilters.search));
+
+  filtered.sort((a,b)=>{
+    let av, bv;
+    if(taskSortState.field==='postId'){ av = a.postId ?? -1; bv = b.postId ?? -1; return (av-bv) * taskSortState.dir; }
+    av = String(a[taskSortState.field] ?? ''); bv = String(b[taskSortState.field] ?? '');
+    return av.localeCompare(bv, 'es', {sensitivity:'base'}) * taskSortState.dir;
+  });
+  updateTaskSortIndicators();
+
+  const groupByPost = taskSortState.field==='postId';
+  const pending = filtered.filter(t => t.state!=='Completada');
+  const completed = filtered.filter(t => t.state==='Completada');
+
+  if(pending.length===0){
+    body.innerHTML = '';
+    emptyEl.innerHTML = '<p class="empty-msg">No hay tareas pendientes.</p>';
+  } else {
+    emptyEl.innerHTML = '';
+    body.innerHTML = buildTaskRowsHtml(pending, groupByPost);
+    wireTaskRows(body);
+  }
+
+  updateCompletedToggleLabel(completed.length);
+  if(completed.length===0){
+    cBody.innerHTML = '';
+    cEmptyEl.innerHTML = '<p class="empty-msg">Sin tareas completadas.</p>';
+  } else {
+    cEmptyEl.innerHTML = '';
+    cBody.innerHTML = buildTaskRowsHtml(completed, groupByPost);
+    wireTaskRows(cBody);
+  }
 }
 
 function render(){ renderCalendar(); renderPosts(); renderDashboard(); renderTasksTable(); }
@@ -878,12 +1049,45 @@ document.querySelectorAll('th.sortable').forEach(th => {
   });
 });
 
+document.querySelectorAll('th.task-sortable').forEach(th => {
+  th.addEventListener('click', () => {
+    const f = th.dataset.field;
+    if(taskSortState.field===f){ taskSortState.dir *= -1; } else { taskSortState.field=f; taskSortState.dir=1; }
+    renderTasksTable();
+  });
+});
+
+['filterTaskState','filterTaskPost','filterTaskAssignee','filterTaskFrom','filterTaskTo'].forEach(id => {
+  document.getElementById(id).addEventListener('change', () => { syncTaskFiltersFromUI(); renderTasksTable(); });
+});
+document.getElementById('filterTaskSearch').addEventListener('input', () => { syncTaskFiltersFromUI(); renderTasksTable(); });
+document.getElementById('filterTaskClear').addEventListener('click', () => {
+  taskFilters = { state:'all', post:'all', assignee:'all', from:'', to:'', search:'' };
+  document.getElementById('filterTaskState').value = 'all';
+  document.getElementById('filterTaskPost').value = 'all';
+  document.getElementById('filterTaskAssignee').value = 'all';
+  document.getElementById('filterTaskFrom').value = '';
+  document.getElementById('filterTaskTo').value = '';
+  document.getElementById('filterTaskSearch').value = '';
+  renderTasksTable();
+});
+
+document.querySelectorAll('#tAssigneeGroup .avatar-btn').forEach(btn => {
+  const name = btn.dataset.assignee;
+  btn.innerHTML = avatarFor(name);
+  btn.addEventListener('click', () => {
+    selectedAssignee = selectedAssignee===name ? null : name;
+    document.querySelectorAll('#tAssigneeGroup .avatar-btn').forEach(b => b.classList.toggle('selected', b.dataset.assignee===selectedAssignee));
+  });
+});
+
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    document.getElementById('newPostSection').style.display = btn.dataset.tab==='calendar' ? '' : 'none';
     if(btn.dataset.tab==='dashboard') renderDashboard();
   });
 });
@@ -892,6 +1096,12 @@ document.getElementById('optionsToggle').addEventListener('click', () => {
   const body = document.getElementById('optionsBody');
   const open = body.classList.toggle('open');
   document.getElementById('optionsToggle').textContent = 'Configurar opciones de los combos ' + (open ? '▴' : '▾');
+});
+
+document.getElementById('completedToggle').addEventListener('click', () => {
+  document.getElementById('completedCollapse').classList.toggle('open');
+  const count = tasks.filter(t=>t.state==='Completada').length;
+  updateCompletedToggleLabel(count);
 });
 
 let pendingImg = null;
@@ -952,7 +1162,7 @@ document.getElementById('addTaskFull').addEventListener('click', async ()=>{
   const due = document.getElementById('tDue').value;
   const state = document.getElementById('tState').value || 'Pendiente';
   const postVal = document.getElementById('tPost').value;
-  if(!name && !comment && !due && !postVal) return;
+  if(!name && !comment && !due && !postVal && !selectedAssignee) return;
   const btn = document.getElementById('addTaskFull');
   btn.disabled = true; btn.textContent = 'Guardando…';
   const payload = {
@@ -961,7 +1171,8 @@ document.getElementById('addTaskFull').addEventListener('click', async ()=>{
     due_date: due || null,
     state,
     done: state==='Completada',
-    post_id: postVal ? Number(postVal) : null
+    post_id: postVal ? Number(postVal) : null,
+    assignee: selectedAssignee
   };
   const { data, error } = await sb.from('tasks').insert(payload).select().single();
   btn.disabled = false; btn.textContent = 'Agregar tarea';
@@ -972,6 +1183,8 @@ document.getElementById('addTaskFull').addEventListener('click', async ()=>{
   document.getElementById('tDue').value = '';
   document.getElementById('tState').value = 'Pendiente';
   document.getElementById('tPost').value = '';
+  selectedAssignee = null;
+  document.querySelectorAll('#tAssigneeGroup .avatar-btn').forEach(b => b.classList.remove('selected'));
   renderTasks();
   renderTasksTable();
   renderMetrics();
