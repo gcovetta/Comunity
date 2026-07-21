@@ -110,7 +110,21 @@
   }
   table.posts-table th.sortable, table.posts-table th.task-sortable{cursor:pointer; user-select:none;}
   table.posts-table th.sortable:hover, table.posts-table th.task-sortable:hover{color:var(--text);}
-  tr.group-start td{border-top:1px dashed var(--border-strong);}
+
+  tr.group-header{cursor:pointer;}
+  tr.group-header td{padding:8px 10px; border-bottom:1px solid var(--border-strong); border-top:1px solid var(--border-strong);}
+  tr.group-header:hover td{filter:brightness(0.97);}
+  .group-toggle{
+    width:18px; height:18px; border-radius:4px; border:1px solid var(--border-strong); background:#fff;
+    display:inline-flex; align-items:center; justify-content:center; font-size:12px; line-height:1;
+    padding:0; margin-right:8px; vertical-align:-4px; pointer-events:none;
+  }
+  .group-label{font-size:13px; font-weight:500;}
+  .group-count{font-size:12px; color:var(--text-muted); margin-left:6px; font-weight:400;}
+  tr.group-child td:first-child{position:relative; padding-left:22px;}
+  tr.group-child td:first-child::before{
+    content:''; position:absolute; left:9px; top:0; bottom:0; width:1px; border-left:1px dashed var(--border-strong);
+  }
   .sort-arrow{margin-left:3px; font-size:9px;}
   table.posts-table td{padding:8px 8px; border-bottom:1px solid var(--border); vertical-align:middle;}
   table.posts-table select, table.posts-table input[type=text], table.posts-table input[type=date]{
@@ -135,6 +149,10 @@
     border:none; background:none;
   }
   .avatar-cell:hover{background:var(--bg);}
+
+  .due-warning{font-size:11px; color:#a32d2d; margin:-4px 0 8px; display:none;}
+  .due-warning.show{display:block;}
+  input.input-warning{background:#fcebeb; border-color:#f7c1c1; color:#791f1f;}
 
   .icon-btn{
     display:inline-flex; align-items:center; justify-content:center;
@@ -314,6 +332,7 @@
           <select id="tState"></select>
           <select id="tPost"></select>
         </div>
+        <div id="tDueWarning" class="due-warning"></div>
         <div class="assignee-row">
           <span class="assignee-label">Asignar a</span>
           <div class="assignee-picker" id="tAssigneeGroup">
@@ -424,7 +443,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
-const APP_VERSION = 'v4.5';
+const APP_VERSION = 'v4.7';
 const APP_UPDATED = '20 jul 2026';
 
 const SUPABASE_URL = 'https://daxxfqquhzqmhpwiwsok.supabase.co';
@@ -861,22 +880,24 @@ function taskPostOptionsHtml(selectedId){
     posts.map(p => `<option value="${p.id}" ${Number(selectedId)===p.id?'selected':''}>${esc(postLabel(p))}</option>`).join('');
 }
 
-function buildTaskRowsHtml(list, groupByPost){
-  let prevPostId;
-  return list.map((t, i) => {
-    const sc = taskStateColor(t.state);
-    const linkedPost = t.postId ? posts.find(p=>p.id===t.postId) : null;
-    const mc = linkedPost ? marcaColor(linkedPost.brand) : null;
-    const fieldStyle = mc ? `background:${mc.bg}; border-color:${mc.bg};` : '';
-    const rowStyle = mc ? `background:${mc.bg};` : '';
-    const firstCellStyle = mc ? `background:${mc.bg}; border-left:3px solid ${mc.fg};` : '';
-    const isNewGroup = groupByPost && i>0 && prevPostId!==t.postId;
-    prevPostId = t.postId;
-    return `
-    <tr data-id="${t.id}" class="${isNewGroup?'group-start':''}" style="${rowStyle}">
+let expandedGroups = new Set();
+let expandedCompletedGroups = new Set();
+
+function taskRowHtml(t){
+  const sc = taskStateColor(t.state);
+  const linkedPost = t.postId ? posts.find(p=>p.id===t.postId) : null;
+  const mc = linkedPost ? marcaColor(linkedPost.brand) : null;
+  const fieldStyle = mc ? `background:${mc.bg}; border-color:${mc.bg};` : '';
+  const rowStyle = mc ? `background:${mc.bg};` : '';
+  const firstCellStyle = mc ? `background:${mc.bg}; border-left:3px solid ${mc.fg};` : '';
+  const dueConflict = linkedPost && t.dueDate && t.dueDate > linkedPost.date;
+  const dueClass = dueConflict ? 'input-warning' : '';
+  const dueTitle = dueConflict ? `La fecha fin es posterior a la publicación (${linkedPost.date})` : '';
+  return `
+    <tr data-id="${t.id}" class="group-child" style="${rowStyle}">
       <td style="${firstCellStyle}"><input type="text" data-field="text" value="${esc(t.text)}" placeholder="Nombre" style="${fieldStyle}"></td>
       <td><input type="text" data-field="comments" value="${esc(t.comments)}" placeholder="Comentario" style="${fieldStyle}"></td>
-      <td class="col-date"><input type="date" data-field="dueDate" value="${t.dueDate || ''}" style="${fieldStyle}"></td>
+      <td class="col-date"><input type="date" data-field="dueDate" value="${t.dueDate || ''}" class="${dueClass}" title="${dueTitle}" style="${dueConflict?'':fieldStyle}"></td>
       <td><select data-field="state" style="background:${sc.bg}; color:${sc.fg}; border-color:${sc.bg}; font-weight:500;">${TASK_STATE_OPTIONS.map(s=>`<option ${s===t.state?'selected':''}>${s}</option>`).join('')}</select></td>
       <td><select data-field="postId" style="${fieldStyle} ${mc?`color:${mc.fg}; font-weight:500;`:''}">${taskPostOptionsHtml(t.postId)}</select></td>
       <td class="col-avatar" style="${rowStyle}"><button type="button" class="avatar-cell" data-act="cycle-assignee" title="${t.assignee || 'Sin asignar'} (click para cambiar)" aria-label="Asignado a ${t.assignee || 'nadie'}">${avatarFor(t.assignee)}</button></td>
@@ -887,11 +908,56 @@ function buildTaskRowsHtml(list, groupByPost){
         </div>
       </td>
     </tr>`;
+}
+
+function buildTaskTreeHtml(list, expandedSet){
+  const groups = new Map();
+  list.forEach(t => {
+    const key = t.postId ? String(t.postId) : 'none';
+    if(!groups.has(key)) groups.set(key, { key, tasks:[] });
+    groups.get(key).tasks.push(t);
+  });
+
+  const entries = Array.from(groups.values());
+  entries.forEach(g => {
+    if(g.key==='none'){ g.label = 'Sin publicación asociada'; g.mc = null; g.sortDate = '9999-99-99'; }
+    else {
+      const p = posts.find(x => x.id===Number(g.key));
+      g.label = p ? postLabel(p) : `Publicación #${g.key}`;
+      g.mc = p ? marcaColor(p.brand) : null;
+      g.sortDate = p ? p.date : '9999-99-99';
+    }
+  });
+  entries.sort((a,b) => a.key==='none' ? 1 : b.key==='none' ? -1 : a.sortDate.localeCompare(b.sortDate));
+
+  return entries.map(g => {
+    const open = expandedSet.has(g.key);
+    const headerStyle = g.mc ? `background:${g.mc.bg};` : 'background:var(--bg);';
+    const labelStyle = g.mc ? `color:${g.mc.fg};` : 'color:var(--text-2);';
+    const rows = open ? g.tasks.map(taskRowHtml).join('') : '';
+    return `
+    <tr class="group-header" data-group="${g.key}" style="${headerStyle}">
+      <td colspan="7">
+        <button type="button" class="group-toggle" tabindex="-1" aria-hidden="true">${open?'−':'+'}</button>
+        <span class="group-label" style="${labelStyle}">${esc(g.label)}</span>
+        <span class="group-count">(${g.tasks.length})</span>
+      </td>
+    </tr>${rows}`;
   }).join('');
 }
 
+function wireGroupToggles(bodyEl, expandedSet){
+  bodyEl.querySelectorAll('tr.group-header').forEach(row => {
+    row.addEventListener('click', () => {
+      const key = row.dataset.group;
+      if(expandedSet.has(key)) expandedSet.delete(key); else expandedSet.add(key);
+      renderTasksTable();
+    });
+  });
+}
+
 function wireTaskRows(bodyEl){
-  bodyEl.querySelectorAll('tr').forEach(row => {
+  bodyEl.querySelectorAll('tr[data-id]').forEach(row => {
     const id = Number(row.dataset.id);
     row.querySelectorAll('[data-field]').forEach(el => {
       const evt = el.tagName==='SELECT' ? 'change' : 'input';
@@ -907,7 +973,7 @@ function wireTaskRows(bodyEl){
           renderTasksTable();
           renderMetrics();
         }
-        if(field==='postId'){
+        if(field==='postId' || field==='dueDate'){
           renderTasksTable();
         }
         setSync('saving', 'Guardando…');
@@ -987,7 +1053,6 @@ function renderTasksTable(){
   });
   updateTaskSortIndicators();
 
-  const groupByPost = taskSortState.field==='postId';
   const pending = filtered.filter(t => t.state!=='Completada');
   const completed = filtered.filter(t => t.state==='Completada');
 
@@ -996,8 +1061,9 @@ function renderTasksTable(){
     emptyEl.innerHTML = '<p class="empty-msg">No hay tareas pendientes.</p>';
   } else {
     emptyEl.innerHTML = '';
-    body.innerHTML = buildTaskRowsHtml(pending, groupByPost);
+    body.innerHTML = buildTaskTreeHtml(pending, expandedGroups);
     wireTaskRows(body);
+    wireGroupToggles(body, expandedGroups);
   }
 
   updateCompletedToggleLabel(completed.length);
@@ -1006,8 +1072,9 @@ function renderTasksTable(){
     cEmptyEl.innerHTML = '<p class="empty-msg">Sin tareas completadas.</p>';
   } else {
     cEmptyEl.innerHTML = '';
-    cBody.innerHTML = buildTaskRowsHtml(completed, groupByPost);
+    cBody.innerHTML = buildTaskTreeHtml(completed, expandedCompletedGroups);
     wireTaskRows(cBody);
+    wireGroupToggles(cBody, expandedCompletedGroups);
   }
 }
 
@@ -1080,6 +1147,20 @@ document.querySelectorAll('#tAssigneeGroup .avatar-btn').forEach(btn => {
     document.querySelectorAll('#tAssigneeGroup .avatar-btn').forEach(b => b.classList.toggle('selected', b.dataset.assignee===selectedAssignee));
   });
 });
+
+function checkDueWarning(){
+  const dueInput = document.getElementById('tDue');
+  const warnEl = document.getElementById('tDueWarning');
+  const postVal = document.getElementById('tPost').value;
+  const due = dueInput.value;
+  const post = postVal ? posts.find(p => p.id===Number(postVal)) : null;
+  const conflict = post && due && due > post.date;
+  dueInput.classList.toggle('input-warning', !!conflict);
+  warnEl.classList.toggle('show', !!conflict);
+  warnEl.textContent = conflict ? `Ojo: la fecha fin es posterior a la publicación (${post.date}).` : '';
+}
+document.getElementById('tDue').addEventListener('input', checkDueWarning);
+document.getElementById('tPost').addEventListener('change', checkDueWarning);
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -1185,6 +1266,7 @@ document.getElementById('addTaskFull').addEventListener('click', async ()=>{
   document.getElementById('tPost').value = '';
   selectedAssignee = null;
   document.querySelectorAll('#tAssigneeGroup .avatar-btn').forEach(b => b.classList.remove('selected'));
+  checkDueWarning();
   renderTasks();
   renderTasksTable();
   renderMetrics();
