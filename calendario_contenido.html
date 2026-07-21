@@ -273,8 +273,8 @@
           <select id="filterType"></select>
           <select id="filterObjetivo"></select>
           <select id="filterState"></select>
-          <input type="date" id="filterFrom" title="Desde">
-          <input type="date" id="filterTo" title="Hasta">
+          <input type="date" id="filterFrom" title="Desde" min="2000-01-01">
+          <input type="date" id="filterTo" title="Hasta" min="2000-01-01">
           <input type="text" id="filterSearch" placeholder="Buscar en descripción, comentarios o responsable">
           <button id="filterClear">Limpiar filtros</button>
         </div>
@@ -328,7 +328,7 @@
         <h2>Nueva tarea</h2>
         <div class="form-grid">
           <input type="text" id="tName" placeholder="Nombre">
-          <input type="date" id="tDue" title="Fecha fin">
+          <input type="date" id="tDue" title="Fecha fin" min="2000-01-01">
           <select id="tState"></select>
           <select id="tPost"></select>
         </div>
@@ -353,8 +353,8 @@
           <select id="filterTaskState"></select>
           <select id="filterTaskPost"></select>
           <select id="filterTaskAssignee"></select>
-          <input type="date" id="filterTaskFrom" title="Fecha fin desde">
-          <input type="date" id="filterTaskTo" title="Fecha fin hasta">
+          <input type="date" id="filterTaskFrom" title="Fecha fin desde" min="2000-01-01">
+          <input type="date" id="filterTaskTo" title="Fecha fin hasta" min="2000-01-01">
           <input type="text" id="filterTaskSearch" placeholder="Buscar en nombre o comentario">
           <button id="filterTaskClear">Limpiar filtros</button>
         </div>
@@ -422,7 +422,7 @@
   <section class="add-post" id="newPostSection">
     <h2>Nueva publicación</h2>
     <div class="form-grid">
-      <input type="date" id="nDate" value="2026-07-20">
+      <input type="date" id="nDate" value="2026-07-20" min="2000-01-01">
       <select id="nBrand"></select>
       <select id="nType"></select>
       <select id="nObjetivo"></select>
@@ -443,7 +443,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
-const APP_VERSION = 'v4.7';
+const APP_VERSION = 'v4.8';
 const APP_UPDATED = '20 jul 2026';
 
 const SUPABASE_URL = 'https://daxxfqquhzqmhpwiwsok.supabase.co';
@@ -544,6 +544,13 @@ function renderDashboard(){
 function pad(n){ return String(n).padStart(2,'0'); }
 function keyOf(y,m,d){ return `${y}-${pad(m+1)}-${pad(d)}`; }
 function esc(s){ return (s||'').replace(/"/g,'&quot;'); }
+
+function isPlausibleDate(dateStr){
+  if(!dateStr) return true;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return false;
+  const year = Number(dateStr.slice(0,4));
+  return year >= 2000 && year <= 2100;
+}
 
 const ICON_TRASH = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>';
 const ICON_CHECK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
@@ -763,7 +770,7 @@ function renderPosts(){
     return `
     <tr data-id="${p.id}">
       <td class="col-thumb"><div class="thumb">${p.img ? `<img src="${p.img}">` : 'sin foto'}</div></td>
-      <td class="col-date"><input type="date" data-field="date" value="${p.date}"></td>
+      <td class="col-date"><input type="date" data-field="date" value="${p.date}" min="2000-01-01"></td>
       <td><select data-field="brand" style="background:${mc.bg}; color:${mc.fg}; border-color:${mc.bg}; font-weight:500;">${optionsHtml(OPTIONS.marca, p.brand)}</select></td>
       <td><select data-field="type">${optionsHtml(OPTIONS.tipo, p.type)}</select></td>
       <td><select data-field="objetivo">${optionsHtml(OPTIONS.objetivo, p.objetivo)}</select></td>
@@ -782,6 +789,11 @@ function renderPosts(){
       el.addEventListener(evt, async () => {
         const post = posts.find(p=>p.id===id);
         if(!post) return;
+        if(el.dataset.field==='date' && !isPlausibleDate(el.value)){
+          alert('Esa fecha no parece válida. Revisá el año.');
+          el.value = post.date;
+          return;
+        }
         post[el.dataset.field] = el.value;
         if(el.dataset.field==='state'){ const c = estadoColor(el.value); el.style.background=c.bg; el.style.color=c.fg; el.style.borderColor=c.bg; }
         if(el.dataset.field==='brand'){ const c = marcaColor(el.value); el.style.background=c.bg; el.style.color=c.fg; el.style.borderColor=c.bg; }
@@ -897,7 +909,7 @@ function taskRowHtml(t){
     <tr data-id="${t.id}" class="group-child" style="${rowStyle}">
       <td style="${firstCellStyle}"><input type="text" data-field="text" value="${esc(t.text)}" placeholder="Nombre" style="${fieldStyle}"></td>
       <td><input type="text" data-field="comments" value="${esc(t.comments)}" placeholder="Comentario" style="${fieldStyle}"></td>
-      <td class="col-date"><input type="date" data-field="dueDate" value="${t.dueDate || ''}" class="${dueClass}" title="${dueTitle}" style="${dueConflict?'':fieldStyle}"></td>
+      <td class="col-date"><input type="date" data-field="dueDate" value="${t.dueDate || ''}" min="2000-01-01" class="${dueClass}" title="${dueTitle}" style="${dueConflict?'':fieldStyle}"></td>
       <td><select data-field="state" style="background:${sc.bg}; color:${sc.fg}; border-color:${sc.bg}; font-weight:500;">${TASK_STATE_OPTIONS.map(s=>`<option ${s===t.state?'selected':''}>${s}</option>`).join('')}</select></td>
       <td><select data-field="postId" style="${fieldStyle} ${mc?`color:${mc.fg}; font-weight:500;`:''}">${taskPostOptionsHtml(t.postId)}</select></td>
       <td class="col-avatar" style="${rowStyle}"><button type="button" class="avatar-cell" data-act="cycle-assignee" title="${t.assignee || 'Sin asignar'} (click para cambiar)" aria-label="Asignado a ${t.assignee || 'nadie'}">${avatarFor(t.assignee)}</button></td>
@@ -966,6 +978,11 @@ function wireTaskRows(bodyEl){
         if(!t) return;
         const field = el.dataset.field;
         const value = el.value;
+        if(field==='dueDate' && !isPlausibleDate(value)){
+          alert('Esa fecha no parece válida. Revisá el año.');
+          el.value = t.dueDate || '';
+          return;
+        }
         t[field] = field==='postId' ? (value ? Number(value) : null) : value;
         if(field==='state'){
           t.done = value==='Completada';
@@ -1197,6 +1214,7 @@ document.getElementById('nImg').addEventListener('change', (e)=>{
 document.getElementById('addPost').addEventListener('click', async ()=>{
   const date = document.getElementById('nDate').value;
   if(!date) return;
+  if(!isPlausibleDate(date)){ alert('Esa fecha no parece válida. Revisá el año.'); return; }
   const btn = document.getElementById('addPost');
   btn.disabled = true; btn.textContent = 'Guardando…';
   const dbPayload = {
@@ -1244,6 +1262,7 @@ document.getElementById('addTaskFull').addEventListener('click', async ()=>{
   const state = document.getElementById('tState').value || 'Pendiente';
   const postVal = document.getElementById('tPost').value;
   if(!name && !comment && !due && !postVal && !selectedAssignee) return;
+  if(!isPlausibleDate(due)){ alert('Esa fecha fin no parece válida. Revisá el año.'); return; }
   const btn = document.getElementById('addTaskFull');
   btn.disabled = true; btn.textContent = 'Guardando…';
   const payload = {
